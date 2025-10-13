@@ -23,7 +23,7 @@ const Home = () => {
           transition={{ duration: 1 }}
           className="text-6xl font-bold mb-4"
         >
-          One-click for Asset Defense
+          DeFi Social Hub
         </motion.h1>
         <motion.p
           initial={{ opacity: 0, y: 50 }}
@@ -31,7 +31,7 @@ const Home = () => {
           transition={{ duration: 1, delay: 0.5 }}
           className="text-xl text-gray-400 mb-8"
         >
-          Dive into the art assets, where innovative blockchain technology meets financial expertise
+          Socialize and pay with PYUSD—your crypto, your community.
         </motion.p>
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
