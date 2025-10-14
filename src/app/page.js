@@ -4,8 +4,22 @@ import { motion } from "framer-motion";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ThreeScene } from "@/components/ThreeScene";
+import { useAccount } from "wagmi";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { useRouter } from "next/navigation";
 
 const Home = () => {
+  const { isConnected } = useAccount();
+  const { openConnectModal } = useConnectModal();
+  const router = useRouter();
+
+  const handleStartNow = () => {
+    if (isConnected) {
+      router.push("/app");
+    } else {
+      openConnectModal();
+    }
+  };
   return (
     <main className="relative w-full h-screen overflow-hidden bg-black text-white">
       <ThreeScene />
@@ -39,8 +53,11 @@ const Home = () => {
           transition={{ duration: 1, delay: 1 }}
           className="flex space-x-4"
         >
-          <button className="px-6 py-3 bg-white text-black rounded-full font-semibold">
-            Open App
+          <button
+            onClick={handleStartNow}
+            className="px-6 py-3 bg-white text-black rounded-full font-semibold"
+          >
+            Start Now
           </button>
           <button className="px-6 py-3 bg-white/10 border border-white/20 rounded-full font-semibold">
             Discover More
