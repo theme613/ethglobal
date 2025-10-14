@@ -50,16 +50,16 @@ export const ThreeScene = () => {
   return (
     <div className="absolute inset-0 z-0">
       <Canvas camera={{ position: [0, 0, 4], fov: 45 }}>
-        <ambientLight intensity={0.4} />
-        {/* Soft white highlights */}
+        <ambientLight intensity={0.5} />
+        {/* Centered highlight */}
         <directionalLight
-          position={[5, 5, 5]}
+          position={[0, 3, 5]}
           intensity={1.5}
           color="white"
         />
-        {/* Deep blue/teal glows */}
-        <pointLight position={[-5, 0, 2]} intensity={2} color="#008080" />
-        <pointLight position={[5, 0, -2]} intensity={2} color="#005f5f" />
+        {/* Symmetrical side glows */}
+        <pointLight position={[-4, 0, 0]} intensity={1.5} color="#008080" />
+        <pointLight position={[4, 0, 0]} intensity={1.5} color="#005f5f" />
 
         <DetailedCoin />
         <OrbitControls enableZoom={false} enablePan={false} />
