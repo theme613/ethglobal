@@ -27,7 +27,11 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "@openzeppelin/contracts": "^5.4.0",
     "@tailwindcss/postcss": "^4",
+    "ethers": "^5.8.0",
+    "hardhat": "^3.0.7",
     "tailwindcss": "^4"
   }
 }

@@ -5,6 +5,7 @@ import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import { ChatLayout } from "@/components/ChatLayout";
 import { Header } from "@/components/Header";
+import { useKYC } from "@/hooks/useKYC";
 
 const LivingRoom = () => {
   return (
@@ -20,12 +21,15 @@ const LivingRoom = () => {
 const AppPage = () => {
   const { isConnected } = useAccount();
   const router = useRouter();
+  const { needsKYC, kycStatus } = useKYC();
 
   useEffect(() => {
     if (!isConnected) {
       router.push("/");
+    } else if (needsKYC) {
+      router.push("/");
     }
-  }, [isConnected, router]);
+  }, [isConnected, needsKYC, router]);
 
   return (
     <main className="relative w-full h-screen overflow-hidden text-white p-4 apple-inspired-bg">

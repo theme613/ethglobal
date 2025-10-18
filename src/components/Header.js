@@ -3,10 +3,14 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Search } from "lucide-react";
 import { WalletConnectButton } from "./ConnectButton";
+// Removed KYCStatusIndicator import since we're using separate pages now
+import { useAccount } from "wagmi";
 
 const navItems = ["Home", "DeFi App", "Assets", "Features", "Pricing", "FAQ"];
 
 export const Header = () => {
+  const { isConnected } = useAccount();
+
   return (
     <motion.header
       initial={{ y: -100 }}
