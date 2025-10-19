@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./SoulBoundToken.sol";
 
@@ -78,7 +78,7 @@ contract PYUSDPaymentGateway is Ownable, ReentrancyGuard {
     event FeeUpdated(uint256 newFee);
     
     modifier onlyVerifiedUser() {
-        require(sbtContract.isUserVerified(msg.sender), "KYC verification required");
+        require(sbtContract.isKYCVerified(msg.sender), "KYC verification required");
         _;
     }
     
@@ -235,7 +235,7 @@ contract PYUSDPaymentGateway is Ownable, ReentrancyGuard {
      */
     function canMakePayment(address user, uint256 amount) external view returns (bool, string memory) {
         // Check KYC verification
-        if (!sbtContract.isUserVerified(user)) {
+        if (!sbtContract.isKYCVerified(user)) {
             return (false, "KYC verification required");
         }
         
