@@ -31,7 +31,7 @@
     "@openzeppelin/contracts": "^5.4.0",
     "@tailwindcss/postcss": "^4",
     "ethers": "^5.8.0",
-    "hardhat": "^3.0.7",
+    "hardhat": "^2.2.3",
     "tailwindcss": "^4"
   }
 }
