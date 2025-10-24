@@ -8,8 +8,8 @@ import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 // Configuration for RainbowKit and Wagmi.
 // Replace 'YOUR_PROJECT_ID' with your WalletConnect project ID.
 const config = getDefaultConfig({
-  appName: "My RainbowKit App",
-  projectId: "YOUR_PROJECT_ID",
+  appName: "PYUSD KYC System",
+  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "YOUR_PROJECT_ID",
   chains: [mainnet, polygon, optimism, arbitrum, base],
   ssr: true, // If your dApp uses server side rendering (SSR)
 });

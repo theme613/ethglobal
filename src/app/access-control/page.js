@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
+import { ethers } from "ethers";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CheckCircle, Coins, Shield, ExternalLink, DollarSign } from "lucide-react";
@@ -43,22 +44,40 @@ const AccessControlPage = () => {
     setIsProcessing(true);
     
     try {
-      // Simulate PYUSD payment process
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Import the contract service
+      const { ContractService } = await import("@/services/contractService");
       
-      setPaymentStatus("COMPLETED");
+      // Get provider and signer from wagmi
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
       
-      // Store payment status
-      localStorage.setItem(`payment_status_${address}`, JSON.stringify({
-        amount: paymentAmount,
-        currency: "PYUSD",
-        timestamp: new Date().toISOString(),
-        status: "COMPLETED"
-      }));
+      // Initialize contract service
+      const contractService = new ContractService(provider, signer);
+      
+      // Call the real PYUSD subscription payment function
+      const result = await contractService.paySubscription();
+      
+      if (result.success) {
+        setPaymentStatus("COMPLETED");
+        
+        // Store payment status
+        localStorage.setItem(`payment_status_${address}`, JSON.stringify({
+          amount: paymentAmount,
+          currency: "PYUSD",
+          timestamp: new Date().toISOString(),
+          status: "COMPLETED",
+          transactionHash: result.transactionHash,
+          blockNumber: result.blockNumber
+        }));
+        
+        console.log("PYUSD payment completed successfully:", result);
+      } else {
+        throw new Error(result.message || result.error);
+      }
       
     } catch (err) {
       console.error("Payment failed:", err);
-      alert("Payment failed. Please try again.");
+      alert(err.message || "Payment failed. Please check your PYUSD balance and try again.");
     } finally {
       setIsProcessing(false);
     }

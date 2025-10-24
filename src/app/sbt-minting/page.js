@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
+import { ethers } from "ethers";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CheckCircle, Shield, Coins, ExternalLink } from "lucide-react";
@@ -26,23 +27,43 @@ const SBTMintingPage = () => {
     setError(null);
     
     try {
-      // Simulate SBT minting process
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Import the contract service
+      const { ContractService } = await import("@/services/contractService");
       
-      // Generate mock token ID
-      const tokenId = Math.floor(Math.random() * 1000000);
-      setSbtTokenId(tokenId);
-      setMintingStatus("MINTED");
+      // Get provider and signer from wagmi
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
       
-      // Store SBT status in localStorage
-      localStorage.setItem(`sbt_status_${address}`, JSON.stringify({
-        tokenId,
-        mintedAt: new Date().toISOString(),
-        isActive: true
-      }));
+      // Initialize contract service
+      const contractService = new ContractService(provider, signer);
+      
+      // Call the real SBT minting function
+      const result = await contractService.mintSBT({
+        userAddress: address
+      });
+      
+      if (result.success) {
+        // Get token ID from the transaction result
+        const tokenId = result.tokenId || "Unknown";
+        setSbtTokenId(tokenId);
+        setMintingStatus("MINTED");
+        
+        // Store SBT status in localStorage
+        localStorage.setItem(`sbt_status_${address}`, JSON.stringify({
+          tokenId,
+          mintedAt: new Date().toISOString(),
+          isActive: true,
+          transactionHash: result.transactionHash,
+          blockNumber: result.blockNumber
+        }));
+        
+        console.log("SBT minted successfully:", result);
+      } else {
+        throw new Error(result.message || result.error);
+      }
       
     } catch (err) {
-      setError("Failed to mint SBT. Please try again.");
+      setError(err.message || "Failed to mint SBT. Please check your wallet connection and try again.");
       console.error("SBT minting failed:", err);
     } finally {
       setIsMinting(false);

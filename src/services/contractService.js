@@ -1,20 +1,24 @@
 /**
  * Smart Contract Interaction Service
- * Handles SBT minting and payment gateway interactions
+ * Handles SBT minting and payment gateway interactions with real MetaMask transactions
  */
 
 import { ethers } from "ethers";
 
-// Contract ABIs (simplified for demo)
-const SBT_ABI = [
-  "function mintSBT(address user, string memory kycReferenceId, uint8 riskScore, string memory amlStatus, uint256 expiryDays) external returns (uint256)",
-  "function isUserVerified(address user) external view returns (bool)",
-  "function getUserSBT(address user) external view returns (tuple(address user, uint256 verificationDate, uint256 expiryDate, string kycReferenceId, uint8 status, uint8 riskScore, string amlStatus))",
-  "function revokeSBT(address user, string memory reason) external",
-  "function renewSBT(address user, uint256 newExpiryDays) external",
-  "function checkExpiry(address user) external",
-  "event SBTMinted(address indexed user, uint256 indexed tokenId, string kycReferenceId, uint256 verificationDate, uint256 expiryDate)"
-];
+// Import actual contract ABIs from artifacts
+import SoulBoundTokenABI from "../../artifacts/contracts/SoulBoundToken.sol/SoulBoundToken.json";
+import PYUSDKYCSubscriptionABI from "../../artifacts/contracts/PYUSDKYCSubscription.sol/PYUSDKYCSubscription.json";
+import PYUSDPaymentGatewayABI from "../../artifacts/contracts/PYUSDPaymentGateway.sol/PYUSDPaymentGateway.json";
+import MockPYUSDABI from "../../artifacts/contracts/MockPYUSD.sol/MockPYUSD.json";
+
+// Contract addresses (update these with your deployed contract addresses)
+const CONTRACT_ADDRESSES = {
+  // Update these with your actual deployed contract addresses
+  SoulBoundToken: process.env.NEXT_PUBLIC_SBT_CONTRACT_ADDRESS || "0x0000000000000000000000000000000000000000",
+  PYUSDKYCSubscription: process.env.NEXT_PUBLIC_SUBSCRIPTION_CONTRACT_ADDRESS || "0x0000000000000000000000000000000000000000",
+  PYUSDPaymentGateway: process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_ADDRESS || "0x0000000000000000000000000000000000000000",
+  MockPYUSD: process.env.NEXT_PUBLIC_MOCK_PYUSD_ADDRESS || "0x0000000000000000000000000000000000000000",
+};
 
 const PAYMENT_GATEWAY_ABI = [
   "function initiatePayment(address to, uint256 amount, string memory description, string memory paymentId) external",
@@ -30,15 +34,43 @@ export class ContractService {
   constructor(provider, signer) {
     this.provider = provider;
     this.signer = signer;
+    this.contractAddresses = CONTRACT_ADDRESSES;
   }
 
   /**
    * Initialize SBT contract
-   * @param {string} contractAddress - SBT contract address
+   * @param {string} contractAddress - SBT contract address (optional, uses default if not provided)
    * @returns {ethers.Contract} - SBT contract instance
    */
-  getSBTContract(contractAddress) {
-    return new ethers.Contract(contractAddress, SBT_ABI, this.signer);
+  getSBTContract(contractAddress = this.contractAddresses.SoulBoundToken) {
+    return new ethers.Contract(contractAddress, SoulBoundTokenABI.abi, this.signer);
+  }
+
+  /**
+   * Initialize PYUSD KYC Subscription contract
+   * @param {string} contractAddress - Contract address (optional, uses default if not provided)
+   * @returns {ethers.Contract} - Contract instance
+   */
+  getSubscriptionContract(contractAddress = this.contractAddresses.PYUSDKYCSubscription) {
+    return new ethers.Contract(contractAddress, PYUSDKYCSubscriptionABI.abi, this.signer);
+  }
+
+  /**
+   * Initialize Payment Gateway contract
+   * @param {string} contractAddress - Contract address (optional, uses default if not provided)
+   * @returns {ethers.Contract} - Contract instance
+   */
+  getPaymentGatewayContract(contractAddress = this.contractAddresses.PYUSDPaymentGateway) {
+    return new ethers.Contract(contractAddress, PYUSDPaymentGatewayABI.abi, this.signer);
+  }
+
+  /**
+   * Initialize Mock PYUSD contract
+   * @param {string} contractAddress - Contract address (optional, uses default if not provided)
+   * @returns {ethers.Contract} - Contract instance
+   */
+  getMockPYUSDContract(contractAddress = this.contractAddresses.MockPYUSD) {
+    return new ethers.Contract(contractAddress, MockPYUSDABI.abi, this.signer);
   }
 
   /**
@@ -52,29 +84,28 @@ export class ContractService {
 
   /**
    * Mint SBT for verified user
-   * @param {string} sbtContractAddress - SBT contract address
    * @param {Object} kycData - KYC verification data
    * @returns {Promise<Object>} - Transaction result
    */
-  async mintSBT(sbtContractAddress, kycData) {
+  async mintSBT(kycData) {
     try {
-      const sbtContract = this.getSBTContract(sbtContractAddress);
-      
-      const tx = await sbtContract.mintSBT(
-        kycData.userAddress,
-        kycData.referenceId,
-        kycData.riskScore,
-        kycData.amlStatus,
-        kycData.expiryDays || 365
-      );
+      if (!this.signer) {
+        throw new Error("No signer available. Please connect your wallet.");
+      }
 
+      const sbtContract = this.getSBTContract();
+      
+      // Call the actual mint function from the SoulBoundToken contract
+      const tx = await sbtContract.mint(kycData.userAddress);
+      
+      // Wait for transaction confirmation
       const receipt = await tx.wait();
       
       // Extract token ID from events
       const mintEvent = receipt.logs.find(log => {
         try {
           const parsed = sbtContract.interface.parseLog(log);
-          return parsed.name === "SBTMinted";
+          return parsed.name === "Minted";
         } catch (e) {
           return false;
         }
@@ -92,31 +123,102 @@ export class ContractService {
         tokenId,
         gasUsed: receipt.gasUsed.toString(),
         blockNumber: receipt.blockNumber,
+        receipt,
       };
     } catch (error) {
       console.error("SBT minting failed:", error);
       return {
         success: false,
         error: error.message,
-        message: "Failed to mint SBT",
+        message: "Failed to mint SBT. Please check your wallet connection and try again.",
       };
     }
   }
 
   /**
    * Check if user is verified
-   * @param {string} sbtContractAddress - SBT contract address
    * @param {string} userAddress - User address
    * @returns {Promise<boolean>} - Verification status
    */
-  async isUserVerified(sbtContractAddress, userAddress) {
+  async isUserVerified(userAddress) {
     try {
-      const sbtContract = this.getSBTContract(sbtContractAddress);
-      const isVerified = await sbtContract.isUserVerified(userAddress);
+      const sbtContract = this.getSBTContract();
+      const isVerified = await sbtContract.isKYCVerified(userAddress);
       return isVerified;
     } catch (error) {
       console.error("Verification check failed:", error);
       return false;
+    }
+  }
+
+  /**
+   * Pay PYUSD subscription fee
+   * @returns {Promise<Object>} - Transaction result
+   */
+  async paySubscription() {
+    try {
+      if (!this.signer) {
+        throw new Error("No signer available. Please connect your wallet.");
+      }
+
+      const subscriptionContract = this.getSubscriptionContract();
+      
+      // Call the paySubscription function
+      const tx = await subscriptionContract.paySubscription();
+      
+      // Wait for transaction confirmation
+      const receipt = await tx.wait();
+      
+      return {
+        success: true,
+        transactionHash: tx.hash,
+        gasUsed: receipt.gasUsed.toString(),
+        blockNumber: receipt.blockNumber,
+        receipt,
+      };
+    } catch (error) {
+      console.error("Subscription payment failed:", error);
+      return {
+        success: false,
+        error: error.message,
+        message: "Failed to pay subscription. Please check your PYUSD balance and wallet connection.",
+      };
+    }
+  }
+
+  /**
+   * Claim ETH gas reimbursement
+   * @param {string} ethAmount - Amount of ETH to claim in wei
+   * @returns {Promise<Object>} - Transaction result
+   */
+  async claimEthGas(ethAmount) {
+    try {
+      if (!this.signer) {
+        throw new Error("No signer available. Please connect your wallet.");
+      }
+
+      const subscriptionContract = this.getSubscriptionContract();
+      
+      // Call the claimEthGas function
+      const tx = await subscriptionContract.claimEthGas(ethAmount);
+      
+      // Wait for transaction confirmation
+      const receipt = await tx.wait();
+      
+      return {
+        success: true,
+        transactionHash: tx.hash,
+        gasUsed: receipt.gasUsed.toString(),
+        blockNumber: receipt.blockNumber,
+        receipt,
+      };
+    } catch (error) {
+      console.error("ETH gas claim failed:", error);
+      return {
+        success: false,
+        error: error.message,
+        message: "Failed to claim ETH gas reimbursement.",
+      };
     }
   }
 
