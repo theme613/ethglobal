@@ -44,36 +44,53 @@ const AccessControlPage = () => {
     setIsProcessing(true);
     
     try {
-      // Import the contract service
-      const { ContractService } = await import("@/services/contractService");
-      
-      // Get provider and signer from wagmi
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      
-      // Initialize contract service
-      const contractService = new ContractService(provider, signer);
-      
-      // Call the real PYUSD subscription payment function
-      const result = await contractService.paySubscription();
-      
-      if (result.success) {
-        setPaymentStatus("COMPLETED");
-        
-        // Store payment status
-        localStorage.setItem(`payment_status_${address}`, JSON.stringify({
-          amount: paymentAmount,
-          currency: "PYUSD",
-          timestamp: new Date().toISOString(),
-          status: "COMPLETED",
-          transactionHash: result.transactionHash,
-          blockNumber: result.blockNumber
-        }));
-        
-        console.log("PYUSD payment completed successfully:", result);
-      } else {
-        throw new Error(result.message || result.error);
+      // Check if MetaMask is available
+      if (!window.ethereum) {
+        throw new Error("MetaMask is not installed. Please install MetaMask to continue.");
       }
+      
+      // Get provider and signer
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      
+      // PYUSD KYC Subscription Contract ABI (simplified)
+      const subscriptionABI = [
+        "function paySubscription() external",
+        "event FeePaid(address indexed payer, uint256 amount, uint256 timestamp)"
+      ];
+      
+      // Contract address (update this with your deployed contract address)
+      const contractAddress = process.env.NEXT_PUBLIC_SUBSCRIPTION_CONTRACT_ADDRESS || "0x0000000000000000000000000000000000000000";
+      
+      if (contractAddress === "0x0000000000000000000000000000000000000000") {
+        throw new Error("Contract address not configured. Please deploy the contract first.");
+      }
+      
+      // Create contract instance
+      const contract = new ethers.Contract(contractAddress, subscriptionABI, signer);
+      
+      // Call the paySubscription function
+      const tx = await contract.paySubscription();
+      
+      // Wait for transaction confirmation
+      const receipt = await tx.wait();
+      
+      setPaymentStatus("COMPLETED");
+      
+      // Store payment status
+      localStorage.setItem(`payment_status_${address}`, JSON.stringify({
+        amount: paymentAmount,
+        currency: "PYUSD",
+        timestamp: new Date().toISOString(),
+        status: "COMPLETED",
+        transactionHash: tx.hash,
+        blockNumber: receipt.blockNumber
+      }));
+      
+      console.log("PYUSD payment completed successfully:", {
+        transactionHash: tx.hash,
+        blockNumber: receipt.blockNumber
+      });
       
     } catch (err) {
       console.error("Payment failed:", err);

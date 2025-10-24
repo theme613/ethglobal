@@ -27,40 +27,70 @@ const SBTMintingPage = () => {
     setError(null);
     
     try {
-      // Import the contract service
-      const { ContractService } = await import("@/services/contractService");
+      // Check if MetaMask is available
+      if (!window.ethereum) {
+        throw new Error("MetaMask is not installed. Please install MetaMask to continue.");
+      }
       
-      // Get provider and signer from wagmi
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      // Get provider and signer
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
       
-      // Initialize contract service
-      const contractService = new ContractService(provider, signer);
+      // SBT Contract ABI (simplified)
+      const sbtABI = [
+        "function mint(address to) external",
+        "event Minted(address indexed to, uint256 indexed tokenId)"
+      ];
       
-      // Call the real SBT minting function
-      const result = await contractService.mintSBT({
-        userAddress: address
+      // Contract address (update this with your deployed contract address)
+      const contractAddress = process.env.NEXT_PUBLIC_SBT_CONTRACT_ADDRESS || "0x0000000000000000000000000000000000000000";
+      
+      if (contractAddress === "0x0000000000000000000000000000000000000000") {
+        throw new Error("Contract address not configured. Please deploy the contract first.");
+      }
+      
+      // Create contract instance
+      const contract = new ethers.Contract(contractAddress, sbtABI, signer);
+      
+      // Call the mint function
+      const tx = await contract.mint(address);
+      
+      // Wait for transaction confirmation
+      const receipt = await tx.wait();
+      
+      // Extract token ID from events
+      const mintEvent = receipt.logs.find(log => {
+        try {
+          const parsed = contract.interface.parseLog(log);
+          return parsed.name === "Minted";
+        } catch (e) {
+          return false;
+        }
       });
       
-      if (result.success) {
-        // Get token ID from the transaction result
-        const tokenId = result.tokenId || "Unknown";
-        setSbtTokenId(tokenId);
-        setMintingStatus("MINTED");
-        
-        // Store SBT status in localStorage
-        localStorage.setItem(`sbt_status_${address}`, JSON.stringify({
-          tokenId,
-          mintedAt: new Date().toISOString(),
-          isActive: true,
-          transactionHash: result.transactionHash,
-          blockNumber: result.blockNumber
-        }));
-        
-        console.log("SBT minted successfully:", result);
-      } else {
-        throw new Error(result.message || result.error);
+      let tokenId = "Unknown";
+      if (mintEvent) {
+        const parsed = contract.interface.parseLog(mintEvent);
+        tokenId = parsed.args.tokenId.toString();
       }
+      
+      setSbtTokenId(tokenId);
+      setMintingStatus("MINTED");
+      
+      // Store SBT status in localStorage
+      localStorage.setItem(`sbt_status_${address}`, JSON.stringify({
+        tokenId,
+        mintedAt: new Date().toISOString(),
+        isActive: true,
+        transactionHash: tx.hash,
+        blockNumber: receipt.blockNumber
+      }));
+      
+      console.log("SBT minted successfully:", {
+        transactionHash: tx.hash,
+        blockNumber: receipt.blockNumber,
+        tokenId
+      });
       
     } catch (err) {
       setError(err.message || "Failed to mint SBT. Please check your wallet connection and try again.");

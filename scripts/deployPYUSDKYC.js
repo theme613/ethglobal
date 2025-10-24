@@ -54,7 +54,8 @@ async function main() {
     console.log("   Name:", await sbt.name());
     console.log("   Symbol:", await sbt.symbol());
     console.log("   Owner:", await sbt.owner());
-    console.log("   Total Supply:", (await sbt.getStats()).totalSupply.toString());
+    const sbtStats = await sbt.getStats();
+    console.log("   Total Supply:", sbtStats.totalSupply.toString());
     console.log();
 
     // Step 2: Deploy PYUSDKYCSubscription
