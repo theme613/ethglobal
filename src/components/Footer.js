@@ -15,7 +15,7 @@ export const Footer = () => {
       <div className="container mx-auto flex justify-between items-center p-4 bg-black/20 backdrop-blur-lg rounded-t-lg border-t border-white/10">
         <div className="flex items-center space-x-8">
           {partners.map((partner) => (
-            <span kwwey={partner} className="text-sm text-gray-400">
+            <span key={partner} className="text-sm text-gray-400">
               {partner}
             </span>
           ))}

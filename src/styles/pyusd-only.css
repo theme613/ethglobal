@@ -1,0 +1,154 @@
+/* PYUSD Only Wallet Styles - Hide ETH Display */
+
+/* Override MetaMask popup styles to show only PYUSD */
+.metamask-popup {
+  /* Hide ETH balance display */
+  .eth-balance {
+    display: none !important;
+  }
+  
+  /* Hide ETH symbol */
+  .eth-symbol {
+    display: none !important;
+  }
+  
+  /* Show only PYUSD */
+  .pyusd-balance {
+    display: block !important;
+  }
+}
+
+/* Custom PYUSD Wallet Component Styles */
+.pyusd-wallet {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  padding: 20px;
+  color: white;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.pyusd-balance-display {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.pyusd-amount {
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 8px 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.pyusd-symbol {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.pyusd-address {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  margin: 12px 0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.pyusd-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.pyusd-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.pyusd-button:active {
+  transform: translateY(0);
+}
+
+/* Hide any ETH references */
+.eth-only {
+  display: none !important;
+}
+
+/* Show only PYUSD references */
+.pyusd-only {
+  display: block !important;
+}
+
+/* Network indicator */
+.pyusd-network {
+  background: rgba(34, 197, 94, 0.2);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  color: #22c55e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+  .pyusd-wallet {
+    padding: 16px;
+  }
+  
+  .pyusd-amount {
+    font-size: 1.5rem;
+  }
+  
+  .pyusd-address {
+    font-size: 0.8rem;
+  }
+}
+
+/* Animation for balance updates */
+.pyusd-balance-update {
+  animation: balanceUpdate 0.5s ease-in-out;
+}
+
+@keyframes balanceUpdate {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Custom scrollbar for wallet modal */
+.pyusd-modal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.pyusd-modal::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.pyusd-modal::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.pyusd-modal::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}

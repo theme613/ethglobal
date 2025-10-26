@@ -6,14 +6,20 @@ import { ethers } from "ethers";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { CheckCircle, Shield, Coins, ExternalLink } from "lucide-react";
+import { CONTRACT_ADDRESSES, getPYUSDAddress } from "@/config/contracts";
+import { getEtherscanTransactionUrl } from "@/services/etherscan";
 
 const SBTMintingPage = () => {
   const { isConnected, address } = useAccount();
   const router = useRouter();
-  const [mintingStatus, setMintingStatus] = useState("PENDING");
-  const [isMinting, setIsMinting] = useState(false);
-  const [sbtTokenId, setSbtTokenId] = useState(null);
+  const [paymentStatus, setPaymentStatus] = useState("PENDING");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [txHash, setTxHash] = useState(null);
   const [error, setError] = useState(null);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+
+  const PAYMENT_AMOUNT = "10"; // 10 PYUSD
+  const RECIPIENT_CONTRACT = "0x6c3ea9036406852006290770BEdFcAbA0e23A0e8";
 
   // Redirect if not connected
   useEffect(() => {
@@ -22,8 +28,35 @@ const SBTMintingPage = () => {
     }
   }, [isConnected, router]);
 
-  const handleMintSBT = async () => {
-    setIsMinting(true);
+  // Check existing payment status
+  useEffect(() => {
+    const checkExistingPayment = async () => {
+      if (!isConnected || !address) return;
+      
+      try {
+        // Check localStorage first
+        const storedPayment = localStorage.getItem(`sbt_status_${address}`);
+        if (storedPayment) {
+          const paymentData = JSON.parse(storedPayment);
+          if (paymentData.isActive && paymentData.transactionHash) {
+            setTxHash(paymentData.transactionHash);
+            setPaymentStatus("COMPLETED");
+            setIsCheckingStatus(false);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error("Error checking payment status:", error);
+      } finally {
+        setIsCheckingStatus(false);
+      }
+    };
+
+    checkExistingPayment();
+  }, [isConnected, address]);
+
+  const handlePayment = async () => {
+    setIsProcessing(true);
     setError(null);
     
     try {
@@ -36,72 +69,72 @@ const SBTMintingPage = () => {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
       
-      // SBT Contract ABI (simplified)
-      const sbtABI = [
-        "function mint(address to) external",
-        "event Minted(address indexed to, uint256 indexed tokenId)"
+      // PYUSD ERC-20 ABI
+      const pyusdABI = [
+        "function transfer(address to, uint256 amount) returns (bool)",
+        "function balanceOf(address owner) view returns (uint256)",
+        "function decimals() view returns (uint8)"
       ];
       
-      // Contract address (update this with your deployed contract address)
-      const contractAddress = process.env.NEXT_PUBLIC_SBT_CONTRACT_ADDRESS || "0x0000000000000000000000000000000000000000";
+      // Get PYUSD contract address
+      const pyusdAddress = getPYUSDAddress();
       
-      if (contractAddress === "0x0000000000000000000000000000000000000000") {
-        throw new Error("Contract address not configured. Please deploy the contract first.");
+      // Create PYUSD contract instance
+      const pyusdContract = new ethers.Contract(pyusdAddress, pyusdABI, signer);
+      
+      // Get decimals (should be 6 for PYUSD)
+      const decimals = await pyusdContract.decimals();
+      console.log("PYUSD decimals:", decimals);
+      
+      // Calculate amount with decimals (10 PYUSD with 6 decimals = 10000000)
+      const amount = ethers.utils.parseUnits(PAYMENT_AMOUNT, decimals);
+      
+      // Check user's PYUSD balance
+      const balance = await pyusdContract.balanceOf(address);
+      if (balance.lt(amount)) {
+        throw new Error(`Insufficient PYUSD balance. You need ${PAYMENT_AMOUNT} PYUSD but have ${ethers.utils.formatUnits(balance, decimals)} PYUSD.`);
       }
       
-      // Create contract instance
-      const contract = new ethers.Contract(contractAddress, sbtABI, signer);
+      // Transfer PYUSD to the recipient contract
+      console.log(`Transferring ${PAYMENT_AMOUNT} PYUSD to ${RECIPIENT_CONTRACT}...`);
+      const tx = await pyusdContract.transfer(RECIPIENT_CONTRACT, amount);
       
-      // Call the mint function
-      const tx = await contract.mint(address);
+      console.log("Transaction sent:", tx.hash);
+      setTxHash(tx.hash);
       
       // Wait for transaction confirmation
       const receipt = await tx.wait();
       
-      // Extract token ID from events
-      const mintEvent = receipt.logs.find(log => {
-        try {
-          const parsed = contract.interface.parseLog(log);
-          return parsed.name === "Minted";
-        } catch (e) {
-          return false;
-        }
-      });
+      setPaymentStatus("COMPLETED");
       
-      let tokenId = "Unknown";
-      if (mintEvent) {
-        const parsed = contract.interface.parseLog(mintEvent);
-        tokenId = parsed.args.tokenId.toString();
-      }
-      
-      setSbtTokenId(tokenId);
-      setMintingStatus("MINTED");
-      
-      // Store SBT status in localStorage
+      // Store payment status in localStorage
       localStorage.setItem(`sbt_status_${address}`, JSON.stringify({
-        tokenId,
+        tokenId: tx.hash.substring(0, 10), // Use part of tx hash as ID
         mintedAt: new Date().toISOString(),
         isActive: true,
         transactionHash: tx.hash,
-        blockNumber: receipt.blockNumber
+        blockNumber: receipt.blockNumber,
+        amount: PAYMENT_AMOUNT,
+        recipient: RECIPIENT_CONTRACT
       }));
       
-      console.log("SBT minted successfully:", {
+      console.log("PYUSD payment successful:", {
         transactionHash: tx.hash,
         blockNumber: receipt.blockNumber,
-        tokenId
+        amount: PAYMENT_AMOUNT,
+        recipient: RECIPIENT_CONTRACT
       });
       
     } catch (err) {
-      setError(err.message || "Failed to mint SBT. Please check your wallet connection and try again.");
-      console.error("SBT minting failed:", err);
+      setError(err.message || "Failed to process PYUSD payment. Please check your wallet connection and try again.");
+      console.error("PYUSD payment failed:", err);
     } finally {
-      setIsMinting(false);
+      setIsProcessing(false);
     }
   };
 
   const handleContinueToPayment = () => {
-    router.push("/access-control");
+    router.push("/app");
   };
 
   if (!isConnected) {
@@ -131,11 +164,11 @@ const SBTMintingPage = () => {
             <div className="mb-3">
               <div className="flex items-center justify-center space-x-2 mb-2">
                 <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                  <Shield className="w-3 h-3" />
+                  <Coins className="w-3 h-3" />
                 </div>
                 <div>
-                  <h1 className="text-lg font-bold">Soul Bound Token (SBT) Minting</h1>
-                  <p className="text-gray-400 text-xs">Step 6 of 8: Mint your KYC verification SBT</p>
+                  <h1 className="text-lg font-bold">10 PYUSD Minting</h1>
+                  <p className="text-gray-400 text-xs">Step 6 of 8: Complete your 10 PYUSD minting</p>
                 </div>
               </div>
               
@@ -153,30 +186,39 @@ const SBTMintingPage = () => {
               </div>
             </div>
 
-            {/* SBT Information */}
+            {/* Payment Information */}
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-2 mb-3">
               <h4 className="font-semibold mb-1 text-xs flex items-center space-x-2">
-                <Shield className="w-3 h-3" />
-                <span>What is a Soul Bound Token (SBT)?</span>
+                <Coins className="w-3 h-3" />
+                <span>Minting Details</span>
               </h4>
               <p className="text-gray-400 text-xs mb-1">
-                SBTs are non-transferable NFTs that prove your KYC verification status. 
-                They cannot be sold or transferred, ensuring your identity remains secure.
+                Complete your {PAYMENT_AMOUNT} PYUSD minting to proceed with the KYC verification process.
               </p>
               <div className="text-xs text-gray-300">
-                <p>• EIP-5192 compliant</p>
-                <p>• Non-transferable</p>
-                <p>• Required for PYUSD payments</p>
+                <p>• Amount: {PAYMENT_AMOUNT} PYUSD</p>
+                <p>• Token: PayPal USD (PYUSD)</p>
+                <p>• Network: Ethereum Sepolia</p>
+                <p>• Decimals: 6</p>
               </div>
             </div>
 
-            {/* Minting Status */}
-            {mintingStatus === "PENDING" && (
+            {/* Loading State */}
+            {isCheckingStatus && (
               <div className="text-center py-3">
-                <Shield className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-                <h3 className="text-sm font-semibold mb-1">Ready to Mint SBT</h3>
+                <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                <h3 className="text-sm font-semibold mb-1">Checking Minting Status</h3>
+                <p className="text-gray-400 text-xs">Verifying your minting status...</p>
+              </div>
+            )}
+
+            {/* Payment Status */}
+            {!isCheckingStatus && paymentStatus === "PENDING" && (
+              <div className="text-center py-3">
+                <Coins className="w-8 h-8 text-blue-500 mx-auto mb-2" />
+                <h3 className="text-sm font-semibold mb-1">Ready to Mint</h3>
                 <p className="text-gray-400 text-xs mb-3">
-                  Your KYC verification is complete. Mint your Soul Bound Token to proceed with PYUSD payments.
+                  Mint {PAYMENT_AMOUNT} PYUSD to complete your verification.
                 </p>
                 
                 {error && (
@@ -186,47 +228,59 @@ const SBTMintingPage = () => {
                 )}
                 
                 <button
-                  onClick={handleMintSBT}
-                  disabled={isMinting}
+                  onClick={handlePayment}
+                  disabled={isProcessing}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center space-x-2 text-xs mx-auto"
                 >
-                  {isMinting ? (
+                  {isProcessing ? (
                     <>
                       <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Minting SBT...</span>
+                      <span>Processing Minting...</span>
                     </>
                   ) : (
                     <>
-                      <Shield className="w-3 h-3" />
-                      <span>Mint SBT</span>
+                      <Coins className="w-3 h-3" />
+                      <span>Mint {PAYMENT_AMOUNT} PYUSD</span>
                     </>
                   )}
                 </button>
               </div>
             )}
 
-            {mintingStatus === "MINTED" && sbtTokenId && (
+            {!isCheckingStatus && paymentStatus === "COMPLETED" && txHash && (
               <div className="text-center py-2">
                 <CheckCircle className="w-6 h-6 text-green-500 mx-auto mb-1" />
-                <h3 className="text-sm font-bold text-green-500 mb-1">SBT Successfully Minted!</h3>
+                <h3 className="text-sm font-bold text-green-500 mb-1">Minting Successful!</h3>
                 <p className="text-gray-400 text-xs mb-2">
-                  Your Soul Bound Token has been minted and is now active in your wallet.
+                  Your {PAYMENT_AMOUNT} PYUSD minting has been completed successfully. KYC verified!
                 </p>
                 
                 <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-2 mb-2">
-                  <h4 className="font-semibold mb-1 text-xs">SBT Details</h4>
+                  <h4 className="font-semibold mb-1 text-xs">Transaction Details</h4>
                   <div className="text-xs space-y-0.5">
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Token ID:</span>
-                      <span className="font-mono">#{sbtTokenId}</span>
+                      <span className="text-gray-400">Amount:</span>
+                      <span>{PAYMENT_AMOUNT} PYUSD</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Status:</span>
-                      <span className="text-green-500">Active</span>
+                      <span className="text-green-500">Completed</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Type:</span>
-                      <span>KYC Verification</span>
+                      <span className="text-gray-400">Recipient:</span>
+                      <span className="font-mono text-xs">{RECIPIENT_CONTRACT.substring(0, 6)}...{RECIPIENT_CONTRACT.substring(38)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">Etherscan:</span>
+                      <a 
+                        href={getEtherscanTransactionUrl(txHash)} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-blue-400 hover:underline flex items-center space-x-1"
+                      >
+                        <span>View Transaction</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -235,25 +289,22 @@ const SBTMintingPage = () => {
                   onClick={handleContinueToPayment}
                   className="px-3 py-1.5 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors text-xs"
                 >
-                  Continue to PYUSD Payments
+                  Go to Playground
                 </button>
               </div>
             )}
 
-            {/* PYUSD Contract Info */}
+            {/* Contract Info */}
             <div className="bg-gray-500/10 border border-gray-500/30 rounded-lg p-2 mt-3">
               <h4 className="font-semibold mb-1 text-xs flex items-center space-x-2">
-                <Coins className="w-3 h-3" />
-                <span>PYUSD Payment Integration</span>
+                <Shield className="w-3 h-3" />
+                <span>Recipient Contract</span>
               </h4>
               <p className="text-gray-400 text-xs mb-1">
-                Your SBT will be used to gate PYUSD payments through our smart contract system.
+                Your minting will be sent to the following contract address:
               </p>
               <div className="text-xs text-gray-300">
-                <p>• Contract: PYUSDKYCSubscription</p>
-                <p>• Token: PayPal USD (PYUSD)</p>
-                <p>• Network: Ethereum Sepolia</p>
-                <p>• Gas Reimbursement: Available</p>
+                <p className="font-mono break-all">{RECIPIENT_CONTRACT}</p>
               </div>
             </div>
           </div>

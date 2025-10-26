@@ -14,26 +14,30 @@ const KYCPage5 = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
 
-  // Redirect if not connected
+  // Redirect if not connected - optimized
   useEffect(() => {
     if (!isConnected) {
       router.push("/");
     }
-  }, [isConnected, router]);
+  }, [isConnected]);
 
-  // Load all form data from localStorage
+  // Load all form data from localStorage - optimized
   useEffect(() => {
-    const page1 = JSON.parse(localStorage.getItem('kyc_page1') || '{}');
-    const page2 = JSON.parse(localStorage.getItem('kyc_page2') || '{}');
-    const page3 = JSON.parse(localStorage.getItem('kyc_page3') || '{}');
-    const page4 = JSON.parse(localStorage.getItem('kyc_page4') || '{}');
-    
-    setAllFormData({
-      ...page1,
-      ...page2,
-      ...page3,
-      ...page4
-    });
+    try {
+      const page1 = JSON.parse(localStorage.getItem('kyc_page1') || '{}');
+      const page2 = JSON.parse(localStorage.getItem('kyc_page2') || '{}');
+      const page3 = JSON.parse(localStorage.getItem('kyc_page3') || '{}');
+      const page4 = JSON.parse(localStorage.getItem('kyc_page4') || '{}');
+      
+      setAllFormData({
+        ...page1,
+        ...page2,
+        ...page3,
+        ...page4
+      });
+    } catch (error) {
+      console.error('Error loading form data:', error);
+    }
   }, []);
 
   const handleSubmit = async () => {

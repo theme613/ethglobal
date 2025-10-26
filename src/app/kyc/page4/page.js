@@ -15,24 +15,22 @@ const KYCPage4 = () => {
   });
   const [errors, setErrors] = useState({});
 
-  // Redirect if not connected
+  // Redirect if not connected - optimized
   useEffect(() => {
     if (!isConnected) {
       router.push("/");
     }
-  }, [isConnected, router]);
+  }, [isConnected]);
 
   const handleImageUpload = (e, type) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setFormData(prev => ({
-          ...prev,
-          [type]: e.target.result
-        }));
-      };
-      reader.readAsDataURL(file);
+      // Optimized: Use URL.createObjectURL for better performance
+      const imageUrl = URL.createObjectURL(file);
+      setFormData(prev => ({
+        ...prev,
+        [type]: imageUrl
+      }));
     }
   };
 

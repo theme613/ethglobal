@@ -3,7 +3,11 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { ThreeScene } from "@/components/ThreeScene";
+import dynamic from "next/dynamic";
+
+const ThreeScene = dynamic(() => import("@/components/ThreeScene"), {
+  ssr: false,
+});
 import KYCWizard from "@/components/KYCWizard";
 
 const KYCWizardPage = () => {

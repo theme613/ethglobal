@@ -20,25 +20,20 @@ async function main() {
   console.log("Deploying contracts with account:", deployer.address);
   console.log("Account balance:", ethers.utils.formatEther(await deployer.getBalance()), "ETH\n");
 
-  // PYUSD contract addresses
-  const PYUSD_ADDRESSES = {
-    mainnet: "0x6c3ea9036406852006290770bedfcaba0e23a0e8", // Official PYUSD proxy
-    sepolia: "0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9", // PYUSD on Sepolia
-    localhost: "0x0000000000000000000000000000000000000000" // Update with local PYUSD address
-  };
+  // PYUSD contract address - Sepolia Testnet only
+  const SEPOLIA_PYUSD_ADDRESS = "0x1E428C843516091bB84f50f2835a22B0054F10F2";
 
   const network = await ethers.provider.getNetwork();
   const networkName = network.name;
   
   console.log(`📡 Network: ${networkName}`);
   
-  // Get PYUSD address for current network
-  const pyusdAddress = PYUSD_ADDRESSES[networkName] || PYUSD_ADDRESSES.localhost;
+  // Use Sepolia PYUSD address
+  const pyusdAddress = SEPOLIA_PYUSD_ADDRESS;
   
-  if (pyusdAddress === "0x0000000000000000000000000000000000000000") {
-    console.log("⚠️  Warning: PYUSD address not set for this network");
-    console.log("Please update the PYUSD_ADDRESSES mapping with the correct address\n");
-  }
+  console.log(`🔗 Using PYUSD address: ${pyusdAddress}`);
+  console.log(`   Network: ${networkName} (Chain ID: ${network.chainId})`);
+  console.log();
 
   // Fee amount: 1 PYUSD (assuming 6 decimals)
   const feeAmount = ethers.utils.parseUnits("1", 6); // 1 PYUSD with 6 decimals
@@ -55,7 +50,8 @@ async function main() {
     console.log("   Symbol:", await sbt.symbol());
     console.log("   Owner:", await sbt.owner());
     const sbtStats = await sbt.getStats();
-    console.log("   Total Supply:", sbtStats.totalSupply.toString());
+    console.log("   Total Supply:", sbtStats[0].toString());
+    console.log("   Next Token ID:", sbtStats[1].toString());
     console.log();
 
     // Step 2: Deploy PYUSDKYCSubscription
@@ -84,10 +80,10 @@ async function main() {
     console.log();
     
     console.log("Subscription Stats:");
-    console.log("   Total Paid:", ethers.utils.formatUnits(subscriptionStats.totalPaid, 6), "PYUSD");
-    console.log("   Total Reimbursed:", ethers.utils.formatEther(subscriptionStats.totalReimbursed), "ETH");
-    console.log("   ETH Balance:", ethers.utils.formatEther(subscriptionStats.ethBalance), "ETH");
-    console.log("   PYUSD Balance:", ethers.utils.formatUnits(subscriptionStats.pyusdBalance, 6), "PYUSD");
+    console.log("   Total Paid:", ethers.utils.formatUnits(subscriptionStats[0], 6), "PYUSD");
+    console.log("   Total Reimbursed:", ethers.utils.formatEther(subscriptionStats[1]), "ETH");
+    console.log("   ETH Balance:", ethers.utils.formatEther(subscriptionStats[2]), "ETH");
+    console.log("   PYUSD Balance:", ethers.utils.formatUnits(subscriptionStats[3], 6), "PYUSD");
     console.log();
 
     // Step 4: Save deployment info

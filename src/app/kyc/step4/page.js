@@ -1,11 +1,9 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { ThreeScene } from "@/components/ThreeScene";
 import { AlertCircle, ArrowRight, ArrowLeft, Camera, FileText, CheckCircle } from "lucide-react";
 
 const KYCStep4Page = () => {
@@ -17,25 +15,22 @@ const KYCStep4Page = () => {
   });
   const [errors, setErrors] = useState({});
 
-  // Redirect if not connected
+  // Redirect if not connected - optimized
   useEffect(() => {
     if (!isConnected) {
       router.push("/login");
     }
-  }, [isConnected, router]);
+  }, [isConnected]);
 
   const handleImageUpload = (e, type) => {
     const file = e.target.files[0];
     if (file) {
-      // Convert to base64 for demo purposes
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setFormData(prev => ({
-          ...prev,
-          [type]: e.target.result
-        }));
-      };
-      reader.readAsDataURL(file);
+      // Optimized: Use URL.createObjectURL for better performance
+      const imageUrl = URL.createObjectURL(file);
+      setFormData(prev => ({
+        ...prev,
+        [type]: imageUrl
+      }));
     }
   };
 
@@ -72,20 +67,15 @@ const KYCStep4Page = () => {
 
   return (
     <main className="relative w-full h-screen overflow-hidden bg-black text-white">
-      <ThreeScene />
+      {/* Optimized background - no heavy 3D components */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-purple-900/20 to-black" />
       </div>
 
       <Header />
 
       <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="max-w-4xl mx-auto w-full"
-        >
+        <div className="max-w-4xl mx-auto w-full">
           <div className="bg-black/80 backdrop-blur-lg rounded-2xl border border-white/10 p-8">
             <div className="mb-8">
               <div className="flex items-center justify-center space-x-3 mb-6">
@@ -191,7 +181,7 @@ const KYCStep4Page = () => {
               </button>
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
 
       <Footer />

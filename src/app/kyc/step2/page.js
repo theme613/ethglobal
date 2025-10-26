@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { ThreeScene } from "@/components/ThreeScene";
+import dynamic from "next/dynamic";
+
+const ThreeScene = dynamic(() => import("@/components/ThreeScene"), {
+  ssr: false,
+});
 import { AlertCircle, ArrowRight, ArrowLeft } from "lucide-react";
 
 const KYCStep2Page = () => {

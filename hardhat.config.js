@@ -1,4 +1,4 @@
-// hardhat.config.js
+// hardhat.config.js - Sepolia Testnet only
 require("@nomiclabs/hardhat-ethers");
 require("dotenv").config();
 
@@ -14,21 +14,19 @@ module.exports = {
     },
   },
   networks: {
+    // Local development network
     hardhat: {
       chainId: 1337
     },
+    // Sepolia Testnet - Primary network
     sepolia: {
-      url: process.env.SEPOLIA_RPC_URL || "https://sepolia.infura.io/v3/YOUR_INFURA_KEY",
+      url: process.env.SEPOLIA_RPC_URL || "https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 11155111
-    },
-    mainnet: {
-      url: process.env.MAINNET_RPC_URL || "https://mainnet.infura.io/v3/YOUR_INFURA_KEY",
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
-      chainId: 1
     }
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY
-  }
+  },
+  defaultNetwork: "sepolia"
 };

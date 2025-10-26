@@ -15,12 +15,12 @@ const KYCPage3 = () => {
   });
   const [errors, setErrors] = useState({});
 
-  // Redirect if not connected
+  // Redirect if not connected - optimized
   useEffect(() => {
     if (!isConnected) {
       router.push("/");
     }
-  }, [isConnected, router]);
+  }, [isConnected]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -29,12 +29,13 @@ const KYCPage3 = () => {
       [name]: value
     }));
     
-    // Clear error when user starts typing
+    // Clear error when user starts typing - optimized
     if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ""
-      }));
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
     }
   };
 
