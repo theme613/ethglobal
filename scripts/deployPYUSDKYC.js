@@ -23,7 +23,7 @@ async function main() {
   // PYUSD contract addresses
   const PYUSD_ADDRESSES = {
     mainnet: "0x6c3ea9036406852006290770bedfcaba0e23a0e8", // Official PYUSD proxy
-    sepolia: "0x0000000000000000000000000000000000000000", // Update with Sepolia PYUSD address
+    sepolia: "0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9", // PYUSD on Sepolia
     localhost: "0x0000000000000000000000000000000000000000" // Update with local PYUSD address
   };
 
@@ -76,12 +76,11 @@ async function main() {
 
     // Step 3: Verify deployment
     console.log("3️⃣ Verifying deployment...");
-    const sbtStats = await sbt.getStats();
     const subscriptionStats = await subscription.getStats();
     
     console.log("SBT Stats:");
-    console.log("   Total Supply:", sbtStats.totalSupply.toString());
-    console.log("   Next Token ID:", sbtStats.nextTokenId.toString());
+    console.log("   Total Supply:", (await sbt.totalSupply()).toString());
+    console.log("   Next Token ID:", (await sbt.nextTokenId()).toString());
     console.log();
     
     console.log("Subscription Stats:");
