@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from 'react';
 import PYUSDWalletButton from '../../components/PYUSDWalletButton';
 import dynamic from "next/dynamic";

@@ -1,5 +1,8 @@
+"use client";
+
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
+import { getPYUSDAddress } from '../config/contracts';
 
 const PYUSDOnlyWallet = () => {
   const [account, setAccount] = useState(null);
